@@ -469,3 +469,8 @@ sudo apt-get install pcl-tools
 pcl_viewer vslam.pcd
 ```
 
+![](./picture/1.png)
+
+![](./picture/2.png)
+
+![](./picture/3.png)
