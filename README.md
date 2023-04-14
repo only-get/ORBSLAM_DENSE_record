@@ -145,7 +145,7 @@ kinect2_bridge: Cannot locate rosdep definition for [kinect2_registration]
 #将原来的：
 rosdep install -r --from-paths . 
 #替换为：
-rosdep install --from-paths ~/catkin_ws/src/iai_kinect2 --ignore-src -r
+rosdep install --from-paths ~/iai_kinect2 --ignore-src -r
 ```
 
 测试
@@ -161,6 +161,10 @@ roslaunch kinect2_bridge kinect2_bridge.launch
 #打开另外一个终端即可看到画面： 
 rosrun kinect2_viewer kinect2_viewer
 ```
+
+标定前效果
+
+![](./picture/raw.png)
 
 # 四、Kinect标定
 
@@ -213,6 +217,7 @@ tips:
 ## 2.详细步骤
 
 1、输入下面命令来获取Kinect数据
+
 ```bash
 roslaunch kinect2_bridge kinect2_bridge.launch
 ```
@@ -244,6 +249,7 @@ rosrun kinect2_calibration kinect2_calibration chess5x7x0.03 calibrate color
 rosrun kinect2_calibration kinect2_calibration chess5x7x0.03 record ir
 ```
 7、校准红外相机的固有特性
+
 ```bash
 rosrun kinect2_calibration kinect2_calibration chess5x7x0.03 calibrate ir
 ```
@@ -256,6 +262,7 @@ rosrun kinect2_calibration kinect2_calibration chess5x7x0.03 record sync
 rosrun kinect2_calibration kinect2_calibration chess5x7x0.03 calibrate sync
 ```
 10、校准深度测量值
+
 ```bash
 rosrun kinect2_calibration kinect2_calibration chess5x7x0.03 calibrate depth
 ```
@@ -284,7 +291,50 @@ roslaunch kinect2_bridge kinect2_bridge.launch
 
 # 五、运行ORBSLAM2-DENSE
 
-1.制作yaml
+## 正常编译ORBSLAM-DENSE
+
+### 1. 下载
+
+```bash
+git clone https://github.com/ningxinb/RGBDdenseMap.git
+```
+
+### 2.安装依赖
+
+#### 1.OpenCV （推荐3.2版本）
+
+  ```bash
+sudo apt-get install build-essential 
+
+sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+
+sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+
+https://github.com/opencv/opencv/releases/tag/3.2.0 下载压缩包
+解压 进入目录
+mkdir build && cd build
+cmake ..
+make -j8
+sudo make install
+  ```
+
+### 3.编译ORB-SLAM2
+
+```bash
+cd RGBDdenseMap
+chmod +x build.sh
+./build.sh
+```
+
+### 4.运行示例数据集
+
+```bash
+./bin/rgbd_tum Vocabulary/ORBvoc.bin Examples/RGB-D/TUMx.yaml path_to_sequence path_to_association
+```
+
+## ros运行
+
+### 1.制作yaml
 
 (1).打开`calib_color.yaml`
 
@@ -306,9 +356,9 @@ cp /home/lee/ORB-SLAM2_RGBD_DENSE_MAP/Examples/RGB-D/kinect.yaml ./kinect2.yaml
 
 ![](./picture/kinect2.png/"")
 
-3.ros运行
+### 2.实时运行
 
-~/catkin_ws/src/iai_kinect2/kinect2_bridge/launch启动：
+
 (1).修改topic
 
 ```bash
@@ -323,10 +373,10 @@ rostopic list
 
 打开ORB-SLAM2/Example/ROS/ORBSLAM2/src/ros_rgbd.cc，将对应语句修改为：
 ```bash
-    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh,"/kinect2/qhd/image_color",1);
+    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh,"/kinect2/qhd/image_color_rect",1);
     message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh,"/kinect2/qhd/image_depth_rect",1);
 ```
-重新编译ros orbslam2
+<font color ='red'>重新编译ros orbslam2</font>
 
 (2).运行：
 
@@ -334,7 +384,27 @@ rostopic list
 rosrun ORB_SLAM2 RGBD  Vocabulary/ORBvoc.txt Examples/RGB-D/kinect2.yaml
 ```
 
-<font color ='red'>！！    彩色稠密点云图的保存    ！！</font>
+### 3.录制.bag运行
+
+(1).录制
+
+```bash
+  rosbag record [topic] -o [文件名]
+ rosbag record /kinect2/qhd/image_color_rect /kinect2/qhd/image_depth_rect -O kinect.bag
+```
+
+(2).运行
+
+```bash
+rosrun ORB_SLAM2 RGBD  Vocabulary/ORBvoc.txt Examples/RGB-D/kinect2.yaml
+rosbag play kinect.bag
+```
+
+
+
+```bash rosbag record /kinect2/qhd/image_color_rect /kinect2/qhd/image_depth_rect -O kinect.bag
+
+# 附加代码修改<font color ='red'>！！    彩色稠密点云图的保存    ！！</font>
 
 ### 1.实时查看彩色点云地图
 
@@ -389,7 +459,7 @@ pcl::io::savePCDFileBinary("vslam.pcd", *globalMap);   // 只需要加入这一�
 ...
 ```
 
-修改之后重新编译程序
+<font color ='red'>修改之后当然要重新编译程序</font>
 并且安装相应的工具，就可以查看生成的文件
 
 ```bash
